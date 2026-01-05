@@ -1,0 +1,501 @@
+<!-- Chosen Palette: "Research Harmony" - Base: Stone-50 (Warm Neutral). Accents: Teal (Discovery), Indigo (Definition), Rose (Evaluation), Amber (Launch). Text: Stone-800. -->
+
+
+<!-- Application Structure Plan:
+    1. **Hero & Mindset:** Introducción atractiva.
+    2. **El Radar de Investigación:** Herramienta analítica central (Scatter Plot).
+    3. **Mapa de Ruta:** Vista orientada al proceso (Timeline).
+    4. **Matriz de Esfuerzo:** Vista estratégica (Bubble Chart).
+    5. **Caja de Herramientas:** Grid filtrable de software.
+    6. **MODIFICADO: El Asistente (Popup):** Widget flotante (estilo chat) disponible en todo momento sin interferir con el scroll.
+-->
+
+
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Brújula UX: Guía de Investigación</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            height: 400px;
+            max-height: 500px;
+        }
+        @media (max-width: 640px) {
+            .chart-container { height: 300px; }
+        }
+        .method-card-anim { transition: all 0.3s ease; }
+        .method-card-anim:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .active-tab { border-bottom: 2px solid #0d9488; color: #0f766e; font-weight: 600; }
+        .inactive-tab { border-bottom: 2px solid transparent; color: #78716c; }
+        .inactive-tab:hover { color: #44403c; }
+       
+        /* Wizard Specific Styles */
+        .wizard-option { cursor: pointer; transition: all 0.2s; }
+        .wizard-option:hover { border-color: #0d9488; background-color: #f0fdfa; }
+        .wizard-selected { border-color: #0d9488; background-color: #ccfbf1; ring: 2px solid #0d9488; }
+       
+        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 antialiased selection:bg-teal-100 selection:text-teal-900 pb-24">
+
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-stone-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+                        <span class="text-2xl">🧭</span>
+                        <span class="font-bold text-xl tracking-tight text-stone-900">Brújula UX</span>
+                    </div>
+                </div>
+                <!-- Desktop Nav -->
+                <div class="hidden md:ml-6 md:flex md:space-x-8">
+                    <button onclick="scrollToSection('mindset')" class="border-transparent text-stone-500 hover:border-stone-300 hover:text-stone-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">Mindset</button>
+                    <button onclick="scrollToSection('radar')" class="border-transparent text-stone-500 hover:border-stone-300 hover:text-stone-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">El Radar</button>
+                    <button onclick="scrollToSection('roadmap')" class="border-transparent text-stone-500 hover:border-stone-300 hover:text-stone-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">Mapa</button>
+                    <button onclick="scrollToSection('matrix')" class="border-transparent text-stone-500 hover:border-stone-300 hover:text-stone-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">Esfuerzo</button>
+                    <button onclick="scrollToSection('tools')" class="border-transparent text-stone-500 hover:border-stone-300 hover:text-stone-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">Herramientas</button>
+                    <button onclick="toggleWizard()" class="border-transparent text-teal-600 font-bold hover:text-teal-800 inline-flex items-center px-1 pt-1 border-b-2 border-teal-500 text-sm transition-colors cursor-pointer">✨ Asistente</button>
+                </div>
+                <!-- Mobile Menu Button -->
+                <div class="flex items-center md:hidden">
+                    <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-stone-500 hover:text-stone-700 p-2">
+                        <span class="text-2xl">☰</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-stone-200">
+            <div class="pt-2 pb-4 space-y-1">
+                <button onclick="toggleWizard(); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-teal-500 text-teal-700 bg-teal-50 font-bold">✨ Asistente</button>
+                <button onclick="scrollToSection('radar'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-stone-600 hover:bg-stone-50">El Radar</button>
+                <button onclick="scrollToSection('roadmap'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-stone-600 hover:bg-stone-50">Mapa de Ruta</button>
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Hero Section -->
+    <header id="mindset" class="bg-white pt-10 pb-16 lg:pt-20 lg:pb-24 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#0d9488_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-semibold uppercase tracking-wide mb-6">
+                Guía para investigadores
+            </div>
+            <h1 class="text-4xl font-extrabold tracking-tight text-stone-900 sm:text-5xl md:text-6xl mb-6 leading-tight">
+                Investigar no es un trámite.<br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-indigo-600">Es tu superpoder.</span>
+            </h1>
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-stone-500 leading-relaxed">
+                Antes de abrir Figma, necesitas entender el "por qué". Usa esta brújula para navegar entre métodos, validar ideas y diseñar con evidencia.
+            </p>
+           
+            <div class="mt-8 flex justify-center gap-4">
+                <button onclick="toggleWizard()" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all transform hover:-translate-y-1">
+                    ✨ Preguntar al Asistente
+                </button>
+                <button onclick="scrollToSection('radar')" class="inline-flex items-center px-6 py-3 border border-stone-300 text-base font-medium rounded-full shadow-sm text-stone-700 bg-white hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all">
+                    Explorar Mapa
+                </button>
+            </div>
+        </div>
+    </header>
+
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-32">
+       
+        <!-- Sticky Detail View Modal -->
+        <div id="detail-overlay" class="fixed inset-0 bg-stone-900/50 z-50 hidden backdrop-blur-sm transition-opacity" onclick="hideDetail()"></div>
+        <div id="detail-modal" class="fixed inset-x-4 bottom-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-3xl bg-white rounded-2xl shadow-2xl border border-stone-200 p-0 z-50 hidden transition-all duration-300 scale-95 opacity-0">
+            <!-- Modal Header -->
+            <div class="px-8 py-6 border-b border-stone-100 flex items-start justify-between bg-stone-50/50 rounded-t-2xl">
+                <div>
+                    <span id="detail-tag" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-800 mb-3">Categoría</span>
+                    <h3 id="detail-title" class="text-3xl font-extrabold text-stone-900">Título</h3>
+                </div>
+                <button onclick="hideDetail()" class="text-stone-400 hover:text-stone-600 hover:bg-stone-100 p-2 rounded-full transition-colors"><span class="sr-only">Cerrar</span><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <!-- Modal Body -->
+            <div class="px-8 py-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2 space-y-6">
+                        <div><h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">¿Qué es?</h4><p id="detail-desc" class="text-stone-700 text-lg leading-relaxed">...</p></div>
+                        <div><h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">¿Cuándo usarlo?</h4><p id="detail-when" class="text-stone-600 leading-relaxed bg-amber-50 p-4 rounded-lg border border-amber-100 text-sm">...</p></div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="bg-stone-50 rounded-xl p-5 border border-stone-100"><h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Herramientas</h4><ul id="detail-tools" class="space-y-2 text-sm text-stone-600 font-medium"></ul></div>
+                        <div class="flex items-center justify-between bg-stone-50 rounded-xl p-5 border border-stone-100"><h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest">Esfuerzo</h4><span id="detail-effort" class="font-bold text-teal-600 bg-white px-3 py-1 rounded-md shadow-sm border border-stone-100">Bajo</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Section 1: The Radar -->
+        <section id="radar" class="scroll-mt-24 pt-12 border-t border-stone-200">
+            <div class="lg:grid lg:grid-cols-12 lg:gap-12 items-center">
+                <div class="lg:col-span-4 mb-10 lg:mb-0">
+                    <div class="inline-block p-3 rounded-2xl bg-indigo-50 text-indigo-600 mb-4 text-3xl">🧭</div>
+                    <h2 class="text-3xl font-bold text-stone-900 mb-4">1. El Radar de Métodos</h2>
+                    <p class="text-stone-600 mb-6 text-lg leading-relaxed">Ubícate en este mapa según el tipo de datos que buscas (Cualitativo vs Cuantitativo) y la naturaleza del insight (Lo que dicen vs Lo que hacen).</p>
+                    <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm text-sm space-y-4">
+                        <h3 class="font-bold text-stone-900 uppercase text-xs tracking-wider">Leyenda</h3>
+                        <div class="flex items-center gap-3"><span class="flex h-3 w-3 rounded-full bg-teal-500 ring-4 ring-teal-100"></span><div><strong class="text-stone-900 block">Cualitativo</strong><span class="text-stone-500 text-xs">Profundidad (El Por Qué)</span></div></div>
+                        <div class="flex items-center gap-3"><span class="flex h-3 w-3 rounded-full bg-indigo-500 ring-4 ring-indigo-100"></span><div><strong class="text-stone-900 block">Cuantitativo</strong><span class="text-stone-500 text-xs">Métricas (El Cuánto)</span></div></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-8 bg-white p-2 md:p-6 rounded-3xl shadow-lg border border-stone-200 relative">
+                    <div class="chart-container"><canvas id="radarChart"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Section 2: Roadmap -->
+        <section id="roadmap" class="scroll-mt-24 pt-12 border-t border-stone-200">
+            <div class="text-center mb-12 max-w-3xl mx-auto">
+                <div class="inline-block p-3 rounded-2xl bg-teal-50 text-teal-600 mb-4 text-3xl">🗺️</div>
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">2. Mapa de Ruta</h2>
+                <p class="text-stone-500 text-lg">La investigación cambia según la madurez del proyecto. Selecciona una fase.</p>
+            </div>
+            <div class="flex flex-col md:flex-row justify-between items-stretch gap-4 mb-12 max-w-5xl mx-auto">
+                <button onclick="updateRoadmap('descubrimiento')" id="step-descubrimiento" class="flex-1 group relative p-6 rounded-2xl border-2 text-left transition-all duration-300 bg-white border-teal-500 shadow-md">
+                    <span class="block text-xs font-bold uppercase tracking-wider text-teal-600 mb-1">Fase 1</span><span class="block text-lg font-bold text-stone-900">Descubrimiento</span>
+                </button>
+                <button onclick="updateRoadmap('definicion')" id="step-definicion" class="flex-1 group relative p-6 rounded-2xl border-2 border-stone-200 text-left transition-all duration-300">
+                    <span class="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1">Fase 2</span><span class="block text-lg font-bold text-stone-900">Definición</span>
+                </button>
+                <button onclick="updateRoadmap('diseno')" id="step-diseno" class="flex-1 group relative p-6 rounded-2xl border-2 border-stone-200 text-left transition-all duration-300">
+                    <span class="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1">Fase 3</span><span class="block text-lg font-bold text-stone-900">Diseño & Eval</span>
+                </button>
+                <button onclick="updateRoadmap('lanzamiento')" id="step-lanzamiento" class="flex-1 group relative p-6 rounded-2xl border-2 border-stone-200 text-left transition-all duration-300">
+                    <span class="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1">Fase 4</span><span class="block text-lg font-bold text-stone-900">Lanzamiento</span>
+                </button>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-12 items-start max-w-6xl mx-auto bg-stone-50 rounded-3xl p-6 md:p-12 border border-stone-200">
+                <div id="phase-description" class="prose prose-stone prose-lg"></div>
+                <div class="space-y-4 relative"><div id="phase-methods" class="space-y-3"></div></div>
+            </div>
+        </section>
+
+
+        <!-- Section 3: Effort vs Value -->
+        <section id="matrix" class="scroll-mt-24 pt-12 border-t border-stone-200">
+             <div class="lg:grid lg:grid-cols-12 lg:gap-12 items-center">
+                <div class="lg:col-span-5 order-last lg:order-first bg-white p-2 md:p-6 rounded-3xl shadow-lg border border-stone-200">
+                    <div class="chart-container"><canvas id="bubbleChart"></canvas></div>
+                </div>
+                <div class="lg:col-span-7 mb-10 lg:mb-0 pl-0 lg:pl-10">
+                    <div class="inline-block p-3 rounded-2xl bg-amber-50 text-amber-600 mb-4 text-3xl">⚖️</div>
+                    <h2 class="text-3xl font-bold text-stone-900 mb-4">3. Matriz de Decisión</h2>
+                    <p class="text-stone-600 mb-8 text-lg leading-relaxed">¿Tienes poco tiempo o presupuesto? Busca los "Quick Wins".</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                         <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100"><strong class="text-emerald-900 block mb-1">Zona Rápida</strong><p class="text-xs text-emerald-800">Agile. Resultados en horas.</p></div>
+                         <div class="bg-amber-50 p-4 rounded-xl border border-amber-100"><strong class="text-amber-900 block mb-1">Zona Media</strong><p class="text-xs text-amber-800">Sprints de Diseño.</p></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Section 4: Tools Grid -->
+        <section id="tools" class="scroll-mt-24 pb-24 border-t border-stone-200 pt-24">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <div class="inline-block p-3 rounded-2xl bg-stone-100 text-stone-600 mb-4 text-3xl">🧰</div>
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">Caja de Herramientas</h2>
+                <p class="text-stone-500">Software específico mencionado en la documentación.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-2xl border border-stone-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all">
+                    <div class="flex items-center justify-between mb-6"><h3 class="font-bold text-xl text-stone-900">Maze / Useberry</h3><span class="text-2xl bg-teal-50 p-2 rounded-lg">⚡</span></div><p class="text-sm text-stone-600 mb-6">Pruebas no moderadas. Prototipos rápidos.</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl border border-stone-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all">
+                    <div class="flex items-center justify-between mb-6"><h3 class="font-bold text-xl text-stone-900">Optimal Workshop</h3><span class="text-2xl bg-indigo-50 p-2 rounded-lg">🌳</span></div><p class="text-sm text-stone-600 mb-6">Card Sorting y Tree Testing.</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl border border-stone-200 shadow-sm hover:shadow-md hover:border-rose-300 transition-all">
+                    <div class="flex items-center justify-between mb-6"><h3 class="font-bold text-xl text-stone-900">Hotjar</h3><span class="text-2xl bg-rose-50 p-2 rounded-lg">🔥</span></div><p class="text-sm text-stone-600 mb-6">Mapas de calor y grabaciones.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+
+    <!-- FLOATING WIZARD (POPUP) -->
+    <!-- Trigger Button -->
+    <button onclick="toggleWizard()" class="fixed bottom-6 right-6 z-40 bg-stone-900 text-white p-4 rounded-full shadow-2xl hover:bg-stone-800 hover:scale-105 transition-all flex items-center gap-2 group border border-stone-700">
+        <span class="text-2xl group-hover:rotate-12 transition-transform">✨</span>
+        <span class="font-bold pr-2 hidden group-hover:inline-block transition-all">Asistente</span>
+    </button>
+
+
+    <!-- Popup Container -->
+    <div id="wizard-popup" class="fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] bg-white rounded-2xl shadow-2xl border border-stone-200 z-50 hidden flex-col max-h-[600px] slide-up">
+        <!-- Header -->
+        <div class="bg-stone-50 p-4 rounded-t-2xl border-b border-stone-100 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">✨</span>
+                <h3 class="font-bold text-stone-800">Asistente de Decisión</h3>
+            </div>
+            <button onclick="toggleWizard()" class="text-stone-400 hover:text-stone-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+
+        <!-- Progress -->
+        <div class="h-1 bg-stone-100 w-full">
+            <div id="wizard-progress" class="h-full bg-teal-500 transition-all duration-500" style="width: 33%"></div>
+        </div>
+
+
+        <!-- Scrollable Content -->
+        <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+            <!-- Question 1 -->
+            <div id="q1" class="wizard-step">
+                <h4 class="font-bold text-stone-900 mb-4 text-lg">¿Cuál es tu objetivo?</h4>
+                <div class="space-y-3">
+                    <button onclick="selectWizardOption('q1', 'explore')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left flex items-center gap-3">
+                        <span class="text-xl">🔍</span>
+                        <div><strong class="block text-sm text-stone-800">Explorar</strong><span class="text-xs text-stone-500">Entender problema</span></div>
+                    </button>
+                    <button onclick="selectWizardOption('q1', 'structure')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left flex items-center gap-3">
+                        <span class="text-xl">🏗️</span>
+                        <div><strong class="block text-sm text-stone-800">Estructurar</strong><span class="text-xs text-stone-500">Organizar info</span></div>
+                    </button>
+                    <button onclick="selectWizardOption('q1', 'validate')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left flex items-center gap-3">
+                        <span class="text-xl">🧪</span>
+                        <div><strong class="block text-sm text-stone-800">Validar</strong><span class="text-xs text-stone-500">Probar diseño</span></div>
+                    </button>
+                    <button onclick="selectWizardOption('q1', 'optimize')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left flex items-center gap-3">
+                        <span class="text-xl">🚀</span>
+                        <div><strong class="block text-sm text-stone-800">Optimizar</strong><span class="text-xs text-stone-500">Medir en vivo</span></div>
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- Question 2 -->
+            <div id="q2" class="wizard-step hidden">
+                <h4 id="q2-title" class="font-bold text-stone-900 mb-4 text-lg">...</h4>
+                <div id="q2-options" class="space-y-3"></div>
+                <button onclick="resetWizard()" class="mt-4 text-xs text-stone-400 hover:text-stone-600 w-full text-center">← Volver</button>
+            </div>
+
+
+            <!-- Results -->
+            <div id="wizard-results" class="wizard-step hidden">
+                <div class="text-center mb-4">
+                    <span class="text-2xl">🎉</span>
+                    <p class="text-sm font-bold text-stone-900">Recomendaciones:</p>
+                </div>
+                <div id="recommended-methods" class="space-y-3"></div>
+                <button onclick="resetWizard()" class="mt-6 w-full py-2 bg-stone-100 text-stone-600 rounded-lg text-sm font-medium hover:bg-stone-200">Empezar de nuevo</button>
+            </div>
+        </div>
+    </div>
+
+
+    <footer class="bg-stone-900 text-stone-400 py-16 mt-12 border-t border-stone-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="mb-8"><span class="text-4xl">🧭</span></div>
+            <p class="mb-6 text-stone-100 text-2xl font-bold max-w-2xl mx-auto leading-tight">"Un poco de investigación es infinitamente mejor que nada de investigación."</p>
+        </div>
+    </footer>
+
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Data Source ---
+        const methodsData = [
+            { id: 'netnografia', name: 'Netnografía', phase: 'descubrimiento', type: 'Qual', axisX: -8, axisY: -4, effort: 'Alto', desc: 'Bucear en foros y redes sociales.', when: 'Para entender contexto cultural.', tools: ['Redes Sociales'] },
+            { id: 'entrevistas', name: 'Entrevistas 1-a-1', phase: 'descubrimiento', type: 'Qual', axisX: -9, axisY: -6, effort: 'Medio', desc: 'Conversaciones profundas.', when: 'Para empatizar.', tools: ['Zoom', 'Grabadora'] },
+            { id: 'shadowing', name: 'Shadowing', phase: 'descubrimiento', type: 'Qual', axisX: -7, axisY: 9, effort: 'Alto', desc: 'Observación en entorno real.', when: 'Entender contexto físico.', tools: ['Cámara'] },
+            { id: 'benchmark', name: 'Benchmarking', phase: 'descubrimiento', type: 'Mix', axisX: 2, axisY: 5, effort: 'Bajo', desc: 'Analizar competencia.', when: 'Antes de diseñar.', tools: ['Navegador'] },
+            { id: 'cardsorting', name: 'Card Sorting', phase: 'definicion', type: 'Mix', axisX: -3, axisY: -2, effort: 'Medio', desc: 'Usuarios agrupan temas.', when: 'Diseñar menús.', tools: ['Optimal Workshop'] },
+            { id: 'treetesting', name: 'Tree Testing', phase: 'diseno', type: 'Quant', axisX: 6, axisY: 7, effort: 'Bajo', desc: 'Evaluar menú sin diseño.', when: 'Validar arquitectura.', tools: ['Optimal Workshop'] },
+            { id: 'firstclick', name: 'First Click', phase: 'diseno', type: 'Quant', axisX: 7, axisY: 8, effort: 'Bajo', desc: 'Dónde hacen el primer clic.', when: 'Validar jerarquía.', tools: ['Maze'] },
+            { id: 'usability_mod', name: 'Pruebas Moderadas', phase: 'diseno', type: 'Qual', axisX: -8, axisY: 8, effort: 'Alto', desc: 'Sesiones guiadas.', when: 'Flujos complejos.', tools: ['Zoom'] },
+            { id: 'usability_unmod', name: 'Pruebas No Moderadas', phase: 'diseno', type: 'Quant', axisX: 5, axisY: 8, effort: 'Medio', desc: 'Usuarios solos con tareas.', when: 'Métricas rápidas.', tools: ['Maze'] },
+            { id: '5second', name: '5-Second Test', phase: 'diseno', type: 'Quant', axisX: 6, axisY: -3, effort: 'Bajo', desc: 'Impresión en 5s.', when: 'Landing Pages.', tools: ['UsabilityHub'] },
+            { id: 'analytics', name: 'Analítica Web', phase: 'lanzamiento', type: 'Quant', axisX: 10, axisY: 10, effort: 'Medio', desc: 'Datos masivos de uso.', when: 'Monitorizar salud.', tools: ['Google Analytics'] },
+            { id: 'abtesting', name: 'A/B Testing', phase: 'lanzamiento', type: 'Quant', axisX: 9, axisY: 9, effort: 'Medio', desc: 'Comparar versiones A/B.', when: 'Optimizar conversión.', tools: ['VWO'] }
+        ];
+
+
+        // --- Core Logic ---
+        function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
+
+
+        function showDetail(method) {
+            const overlay = document.getElementById('detail-overlay');
+            const modal = document.getElementById('detail-modal');
+            document.getElementById('detail-title').innerText = method.name;
+            document.getElementById('detail-desc').innerText = method.desc;
+            document.getElementById('detail-when').innerText = method.when;
+            document.getElementById('detail-effort').innerText = method.effort;
+            const toolsList = document.getElementById('detail-tools');
+            toolsList.innerHTML = '';
+            method.tools.forEach(t => toolsList.innerHTML += `<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-stone-300"></span>${t}</li>`);
+           
+            overlay.classList.remove('hidden'); modal.classList.remove('hidden');
+            setTimeout(() => { overlay.classList.remove('opacity-0'); modal.classList.remove('opacity-0', 'scale-95'); modal.classList.add('opacity-100', 'scale-100'); }, 10);
+           
+            // Close wizard if open
+            if(!document.getElementById('wizard-popup').classList.contains('hidden')) toggleWizard();
+        }
+
+
+        function hideDetail() {
+            const overlay = document.getElementById('detail-overlay');
+            const modal = document.getElementById('detail-modal');
+            overlay.classList.add('opacity-0'); modal.classList.remove('opacity-100', 'scale-100'); modal.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => { overlay.classList.add('hidden'); modal.classList.add('hidden'); }, 300);
+        }
+
+
+        // --- Wizard Popup Logic ---
+        let wizardState = { q1: null };
+
+
+        function toggleWizard() {
+            const popup = document.getElementById('wizard-popup');
+            popup.classList.toggle('hidden');
+        }
+
+
+        function selectWizardOption(question, value) {
+            wizardState[question] = value;
+            const options = document.querySelectorAll(`#${question} .wizard-option`);
+            options.forEach(opt => opt.classList.remove('wizard-selected'));
+            event.currentTarget.classList.add('wizard-selected');
+
+
+            if(question === 'q1') {
+                document.getElementById('wizard-progress').style.width = '66%';
+                showQ2(value);
+            } else if (question === 'q2') {
+                document.getElementById('wizard-progress').style.width = '100%';
+                showResults(value);
+            }
+        }
+
+
+        function showQ2(q1Value) {
+            const q2 = document.getElementById('q2');
+            const q1 = document.getElementById('q1');
+            const title = document.getElementById('q2-title');
+            const opts = document.getElementById('q2-options');
+           
+            q1.classList.add('hidden');
+            q2.classList.remove('hidden');
+
+
+            let html = '';
+            if (q1Value === 'explore') {
+                title.innerText = '¿Necesitas...';
+                html = `<button onclick="selectWizardOption('q2', 'context')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">🌍 Ver Contexto (Observar)</button>
+                        <button onclick="selectWizardOption('q2', 'talk')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">🗣️ Hablar (Profundizar)</button>`;
+            } else if (q1Value === 'structure') {
+                title.innerText = '¿Vas a...';
+                html = `<button onclick="selectWizardOption('q2', 'create_struct')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">✨ Crear Nueva Estructura</button>
+                        <button onclick="selectWizardOption('q2', 'validate_struct')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">✅ Validar Menú Existente</button>`;
+            } else if (q1Value === 'validate') {
+                title.innerText = '¿Te importa más...';
+                html = `<button onclick="selectWizardOption('q2', 'why_fail')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">🤔 El "Por Qué" (Cualitativo)</button>
+                        <button onclick="selectWizardOption('q2', 'how_many')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">📊 El "Cuántos" (Rápido)</button>`;
+            } else {
+                title.innerText = '¿Qué optimizas?';
+                html = `<button onclick="selectWizardOption('q2', 'behavior')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">🖱️ Comportamiento</button>
+                        <button onclick="selectWizardOption('q2', 'conversion')" class="wizard-option w-full p-3 rounded-lg border border-stone-200 text-left">💰 Conversión (A/B)</button>`;
+            }
+            opts.innerHTML = html;
+        }
+
+
+        function showResults(finalChoice) {
+            document.getElementById('q2').classList.add('hidden');
+            document.getElementById('wizard-results').classList.remove('hidden');
+            const container = document.getElementById('recommended-methods');
+            container.innerHTML = '';
+
+
+            let ids = [];
+            if (wizardState.q1 === 'explore') ids = finalChoice === 'context' ? ['shadowing'] : ['entrevistas'];
+            else if (wizardState.q1 === 'structure') ids = finalChoice === 'create_struct' ? ['cardsorting'] : ['treetesting'];
+            else if (wizardState.q1 === 'validate') ids = finalChoice === 'why_fail' ? ['usability_mod'] : ['usability_unmod', '5second'];
+            else ids = finalChoice === 'behavior' ? ['analytics'] : ['abtesting'];
+
+
+            ids.forEach(id => {
+                const m = methodsData.find(m => m.id === id);
+                if(m) {
+                    container.innerHTML += `
+                        <div onclick="showDetail(methodsData.find(x=>x.id=='${m.id}'))" class="bg-teal-50 p-3 rounded-lg border border-teal-100 flex justify-between items-center cursor-pointer hover:shadow-sm">
+                            <div><strong class="text-teal-900 text-sm">${m.name}</strong><p class="text-xs text-teal-700">${m.desc}</p></div><span class="text-lg">👉</span>
+                        </div>`;
+                }
+            });
+        }
+
+
+        function resetWizard() {
+            wizardState = { q1: null };
+            document.getElementById('q1').classList.remove('hidden');
+            document.getElementById('q2').classList.add('hidden');
+            document.getElementById('wizard-results').classList.add('hidden');
+            document.getElementById('wizard-progress').style.width = '33%';
+            document.querySelectorAll('.wizard-option').forEach(o => o.classList.remove('wizard-selected'));
+        }
+
+
+        // --- Roadmap Logic ---
+        const phasesInfo = { 'descubrimiento': {title:'Descubrimiento', desc:'Entender el problema.', color:'border-teal-500'}, 'definicion': {title:'Definición', desc:'Estructurar.', color:'border-indigo-500'}, 'diseno': {title:'Diseño y Eval', desc:'Validar.', color:'border-rose-500'}, 'lanzamiento': {title:'Lanzamiento', desc:'Optimizar.', color:'border-amber-500'} };
+        function updateRoadmap(phaseId) {
+            ['descubrimiento', 'definicion', 'diseno', 'lanzamiento'].forEach(id => {
+                const btn = document.getElementById(`step-${id}`);
+                btn.className = id === phaseId ? 'flex-1 group relative p-6 rounded-2xl border-2 text-left bg-white border-teal-500 shadow-md' : 'flex-1 group relative p-6 rounded-2xl border-2 border-stone-200 text-left';
+            });
+            const info = phasesInfo[phaseId];
+            document.getElementById('phase-description').innerHTML = `<h3 class="text-3xl font-bold mb-4 text-stone-900">${info.title}</h3><p class="text-stone-600 leading-relaxed text-lg border-l-4 ${info.color} pl-4">${info.desc}</p>`;
+            const list = document.getElementById('phase-methods'); list.innerHTML = '';
+            methodsData.filter(m => m.phase === phaseId).forEach(m => {
+                list.innerHTML += `<div onclick="showDetail(methodsData.find(x=>x.id=='${m.id}'))" class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm cursor-pointer hover:shadow-md flex justify-between items-center"><div><h4 class="font-bold text-stone-900">${m.name}</h4><p class="text-xs text-stone-500">${m.desc}</p></div><span>→</span></div>`;
+            });
+        }
+
+
+        // --- Charts ---
+        new Chart(document.getElementById('radarChart').getContext('2d'), { type: 'scatter', data: { datasets: [{ label: 'Métodos', data: methodsData.map(m => ({ x: m.axisX, y: m.axisY, method: m })), backgroundColor: '#14b8a6', pointRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false, min: -11, max: 11 }, y: { display: false, min: -11, max: 11 } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.method.name } } }, onClick: (e, elements) => { if(elements.length) showDetail(methodsData[elements[0].index]); } } });
+        new Chart(document.getElementById('bubbleChart').getContext('2d'), { type: 'bubble', data: { datasets: [{ label: 'Esfuerzo', data: methodsData.map(m => ({ x: m.effortScore, y: m.valueScore, r: 12, method: m })), backgroundColor: m => m.raw.method.effortScore <= 5 ? '#f59e0b' : '#f43f5e' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false, min: 0, max: 11 }, y: { display: false, min: 0, max: 11 } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.method.name } } }, onClick: (e, elements) => { if(elements.length) showDetail(methodsData[elements[0].index]); } } });
+
+
+        updateRoadmap('descubrimiento');
+    </script>
+</body>
+</html>
+
